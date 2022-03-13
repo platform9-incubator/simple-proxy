@@ -21,17 +21,20 @@ type blockingProxy struct {
 
 var (
 	proxy  = blockingProxy{}
-	logger = log.New(os.Stdout, "[proxy]", log.LstdFlags)
+	debugLogger = log.New(os.Stdout, "[debug]", log.LstdFlags)
+	infoLogger = log.New(os.Stdout, "[info]", log.LstdFlags)
+	warnLogger = log.New(os.Stdout, "[warn]", log.LstdFlags)
+	errorLogger = log.New(os.Stdout, "[error]", log.LstdFlags)
 )
 
 // start listening to the listenPort
 func (p *blockingProxy) start() {
-	logger.Printf("Starting proxy on port %d", p.listenPort)
+	infoLogger.Printf("Starting proxy on port %d", p.listenPort)
 	http.ListenAndServe(":"+strconv.Itoa(p.listenPort), p)
 }
 
 func httpError(w http.ResponseWriter, message string, code int) {
-	logger.Printf("Error: %s", message)
+	errorLogger.Printf("Error: %s", message)
 	http.Error(w, message, code)
 }
 
@@ -56,14 +59,17 @@ func (p *blockingProxy) ServeHTTP(wr http.ResponseWriter, req *http.Request) {
 		httpError(wr, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	logger.Printf("Received request to connect to %s", req.URL.Host) 
+	debugLogger.Printf("Received request to connect to %s", req.URL.Host) 
 	if err := compareHostPorts(req.URL.Host, p.targetHostPort); err != nil {
 		httpError(wr, err.Error(), http.StatusBadRequest)
 		return
 	}
-	
-	logger.Printf("Proxying request to %v", req.URL.Host)
-	upstreamConn, err := net.Dial("tcp", req.URL.Host)
+	host := req.URL.Host
+	if p.targetIP != "" {
+		host = p.targetIP
+	}
+	debugLogger.Printf("Proxying request to %v", host)
+	upstreamConn, err := net.Dial("tcp", host)
 	if err != nil {
 		httpError(wr, err.Error(), http.StatusInternalServerError)
 		return
@@ -91,7 +97,7 @@ func Pipe(conn1 net.Conn, conn2 net.Conn) {
 		defer conn1.Close()
 		defer conn2.Close()
 		if _, err := io.Copy(conn1, conn2); err != nil {
-			logger.Printf("error copying data %v", err)
+			warnLogger.Printf("error copying data %v", err)
 		}
 	}()
 
@@ -100,7 +106,7 @@ func Pipe(conn1 net.Conn, conn2 net.Conn) {
 		defer conn1.Close()
 		defer conn2.Close()
 		if _, err := io.Copy(conn2, conn1); err != nil {
-			logger.Printf("error copying data %v", err)
+			warnLogger.Printf("error copying data %v", err)
 		}
 	}()
 
@@ -112,17 +118,22 @@ var cmd = &cobra.Command{
 	Use:   "proxy",
 	Short: "A proxy that blocks all requests except for the target host",
 	Long:  "A proxy that blocks all requests except for the target host",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		host, _, err := net.SplitHostPort(proxy.targetHostPort)
+		if err != nil {
+			warnLogger.Printf("error parsing target host:port %s %s", proxy.targetHostPort, host)
+			proxy.targetHostPort = fmt.Sprintf("%s:443", proxy.targetHostPort)
+		}
 		proxy.start()
+		return nil
 	},
 }
 
 func init() {
-	cmd.Flags().IntVarP(&proxy.listenPort, "listen-port", "l", 8080, "The port to listen on")
-	cmd.Flags().StringVarP(&proxy.targetHostPort, "target-host", "t", "", "The host to proxy to")
-	cmd.MarkFlagRequired("target-host")
+	cmd.Flags().IntVarP(&proxy.listenPort, "port", "l", 8080, "The port to listen on")
+	cmd.Flags().StringVarP(&proxy.targetHostPort, "target", "t", "", "The host to proxy to (host:port)")
+	cmd.MarkFlagRequired("target")
 	cmd.Flags().StringVarP(&proxy.targetIP, "target-ip", "i", "", "The ip of the host to proxy to (optional)")
-
 }
 
 func main() {
