@@ -7,12 +7,15 @@ on:
     branches: [ main ]
 
 jobs:
-
+        
   release-linux-amd64:
       name: release linux/amd64
       runs-on: ubuntu-latest
       steps:
       - uses: actions/checkout@master
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.2'
       - name: compile and release
         uses: ngs/go-release.action@v1.0.1
         env:
@@ -26,6 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
+    - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.2'
     - name: compile and release
       uses: ngs/go-release.action@v1.0.1
       env:
