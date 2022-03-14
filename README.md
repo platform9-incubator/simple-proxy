@@ -1,5 +1,8 @@
+
 # simple-proxy
+
 A simple proxy to test airgapped browser access
+[![Release](https://github.com/platform9-incubator/simple-proxy/actions/workflows/release.yml/badge.svg)](https://github.com/platform9-incubator/simple-proxy/actions/workflows/release.yml)
 
 # how to run
 
