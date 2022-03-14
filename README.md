@@ -20,6 +20,8 @@ simple-proxy --port=8080 --target pf9-1.local.net:8080 --target-ip 192.168.210.2
 
 # Start browser with proxy
 
+The following works but you will need to exit windows other wise Chrome uses the existing session
+
 ```
 /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --proxy-server=localhost:8080 --incognito https://www.google.com
 ```
