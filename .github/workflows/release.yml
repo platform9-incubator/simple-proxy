@@ -1,9 +1,7 @@
-name: Go
-
+name: Release
 on:
-  push:
-    tags:
-      - '*'
+  release:
+    types: [created]
 
 jobs:
   release-matrix:        
