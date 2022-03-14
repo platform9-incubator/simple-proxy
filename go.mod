@@ -1,6 +1,6 @@
 module github.com/platform9-incubator/simple-proxy
 
-go 1.17
+go 1.15
 
 require github.com/spf13/cobra v1.4.0
 
